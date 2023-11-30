@@ -33,7 +33,8 @@ class AggregationViewSet(viewsets.ViewSet):
     def list(self, request):
         data = {"message": "Following endpoints are available from the current root",
                 "endpoints": ['average_age_per_industry', 'average_salary_per_industry',
-                                'average_salary_per_experiance', 'average_salary_by_domain']}
+                                'average_salary_per_experiance', 'average_salary_by_domain',
+                                'women_in_industry_stat']}
         return Response(data)
 
     # GET endpoint: /aggregation/average_age_per_industry/
@@ -44,7 +45,7 @@ class AggregationViewSet(viewsets.ViewSet):
             # Fetch required data 
             df = self.create_dataframe(Person, ['industry', 'age'])
 
-            response = self.avg_by_industry(df, 'age')
+            response = self.avg_by_field(df, 'age')
             status_code = status.HTTP_200_OK
         except Exception as e:
             response = {'error': f'Error calculating average age per industry: {str(e)}'}
@@ -59,7 +60,7 @@ class AggregationViewSet(viewsets.ViewSet):
         try:
             df = self.create_dataframe(Person, ['industry', 'salary'])
 
-            response = self.avg_by_industry(df, 'salary')
+            response = self.avg_by_field(df, 'salary')
             status_code = status.HTTP_200_OK
         except Exception as e:
             response = {'error': f'Error calculating average salary per industry: {str(e)}'}
@@ -75,7 +76,7 @@ class AggregationViewSet(viewsets.ViewSet):
             columns = ['salary', 'years_of_experience']
             df = self.create_dataframe(Person, columns)
 
-            response = self.avg_by_industry(df, *columns)
+            response = self.avg_by_field(df, *columns)
             status_code = status.HTTP_200_OK
         except Exception as e:
             response = {'error': f'Error calculating average age per experiance: {str(e)}'}
@@ -97,7 +98,7 @@ class AggregationViewSet(viewsets.ViewSet):
             df = df.withColumn("email_domain", regexp_extract(col("email"), domain_extraction_regex, 1))
             df = df.na.drop(subset=['email'])
 
-            response = self.avg_by_industry(df, 'salary', 'email_domain')
+            response = self.avg_by_field(df, 'salary', 'email_domain')
             response['message'] = f'Only {df.count()} records remain after removing Nulls for email field'
             status_code = status.HTTP_200_OK
 
@@ -165,7 +166,7 @@ class AggregationViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({'error': f'Error creating DataFrame: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def avg_by_industry(self, df, avg_by, group_by='industry'):
+    def avg_by_field(self, df, avg_by, group_by='industry'):
         message = ''
         # Calculate counts for response
         null_count = df.filter(col(group_by).isNull()).count()
